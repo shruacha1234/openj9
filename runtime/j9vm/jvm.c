@@ -1,5 +1,4 @@
-/*******************************************************************************
- * Copyright IBM Corp. and others 2002
+pyright IBM Corp. and others 2002
  *
  * This program and the accompanying materials are made available under
  * the terms of the Eclipse Public License 2.0 which accompanies this
@@ -2045,7 +2044,7 @@ JNI_CreateJavaVM_impl(JavaVM **pvm, void **penv, void *vm_args, BOOLEAN isJITSer
 	}
 #endif
 
-#if defined(AIXPPC)
+#if defined(AIXPPC) || (defined(J9ZOS390) && (JAVA_SPEC_VERSION >= 21))
 	/* CMVC 137180:
 	 * in some cases the LIBPATH does not contain /usr/lib, when
 	 * trying to load application native libraries that are linked against
@@ -2060,12 +2059,19 @@ JNI_CreateJavaVM_impl(JavaVM **pvm, void **penv, void *vm_args, BOOLEAN isJITSer
 		 * LIBPATH=/jre/lib/ppc64/j9vm:/jre/lib/ppc64:/jre/lib/ppc64/jli:/jre/../lib/ppc64:/usr/lib
 		 */
 
+		/* On z/OS Java 21 and up, if /lib isn't already present in LIBPATH, append it to the end. */
 		const char *currentLibPath = getenv("LIBPATH");
 		BOOLEAN appendToLibPath = TRUE;
 		if (NULL != currentLibPath) {
 			const size_t currentLibPathLength = strlen(currentLibPath);
+#if defined(AIXPPC)
 			const char *usrLib = "/usr/lib";
 			const UDATA usrLibLength = LITERAL_STRLEN("/usr/lib");
+#else /* defined(AIXPPC) */
+			/* on z/OS Java 21+ */
+			const char *usrLib = "/lib";
+			const UDATA usrLibLength = LITERAL_STRLEN("/lib");
+#endif /* defined(AIXPPC) */
 			const char *needle = strstr(currentLibPath, usrLib);
 			while (NULL != needle) {
 				/* Note, inside the loop we're guaranteed to have
@@ -2085,7 +2091,7 @@ JNI_CreateJavaVM_impl(JavaVM **pvm, void **penv, void *vm_args, BOOLEAN isJITSer
 			}
 		}
 		if (appendToLibPath) {
-			addToLibpath("/usr/lib", FALSE);
+			addToLibpath(usrLib, FALSE);
 		}
 	}
 	/* CMVC 135358.
